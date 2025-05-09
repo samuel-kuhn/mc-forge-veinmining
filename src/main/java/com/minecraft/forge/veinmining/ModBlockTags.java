@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.Block;
 
 public class ModBlockTags {
     public static final TagKey<Block> ORES = createTag("ores");
+    public static final TagKey<Block> WOOD = createTag("wood");
 
     private static TagKey<Block> createTag(String name) {
         return BlockTags.create(ResourceLocation.fromNamespaceAndPath(VeinMiningMod.MOD_ID, name));
