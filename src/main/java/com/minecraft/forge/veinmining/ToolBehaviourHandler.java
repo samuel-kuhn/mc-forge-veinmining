@@ -33,6 +33,8 @@ public class ToolBehaviourHandler {
         for (BlockPos pos : matchingBlocks) {
             VeinMiningMod.logInfo(pos.toShortString());
             breakBlock(level, pos, event.getPlayer().getMainHandItem());
+            tool.hurtAndBreak(1, event.getPlayer(), EquipmentSlot.MAINHAND);
+            if (tool.getCount() <= 0) return;
         }
     }
 
