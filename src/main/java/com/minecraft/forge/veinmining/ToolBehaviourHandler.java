@@ -29,8 +29,6 @@ public class ToolBehaviourHandler {
         Level level = (Level) event.getLevel();
         List<BlockPos> matchingBlocks = getMatchingBlocks(event.getPos(), event.getState(), level);
 
-        VeinMiningMod.logInfo("Breaking block "+  event.getPos().toString());
-        VeinMiningMod.logInfo("Block: " +  event.getState().getBlock().getName());
         for (BlockPos pos : matchingBlocks) {
             VeinMiningMod.logInfo(pos.toShortString());
             breakBlock(level, pos, tool);
