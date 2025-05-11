@@ -1,20 +1,22 @@
 package com.minecraft.forge.veinmining;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 
 @Mod.EventBusSubscriber(modid = VeinMiningMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ToolBehaviourHandler {
@@ -22,35 +24,80 @@ public class ToolBehaviourHandler {
     @SubscribeEvent
     public static void onBlockBreakEvent(BlockEvent.BreakEvent event) {
         ItemStack tool = event.getPlayer().getMainHandItem();
-        if (event.getPlayer().isCreative()) return; // check gamemode
-        if (!event.getState().is(ModBlockTags.ORES) && !event.getState().is(ModBlockTags.WOOD)) return; // check block type
-        if (!tool.isCorrectToolForDrops(event.getState())) return; // check tool is correct
-
+        BlockState state = event.getState();
         Level level = (Level) event.getLevel();
-        List<BlockPos> matchingBlocks = getMatchingBlocks(event.getPos(), event.getState(), level);
 
-        for (BlockPos pos : matchingBlocks) {
-            VeinMiningMod.logInfo(pos.toShortString());
-            breakBlock(level, pos, tool);
-            tool.hurtAndBreak(1, event.getPlayer(), EquipmentSlot.MAINHAND);
-            if (tool.getCount() <= 0) return;
+        if (event.getPlayer().isCreative()) return; // check gamemode
+        if (!tool.isCorrectToolForDrops(state)) return; // check tool is correct
+
+        if (state.is(ModBlockTags.WOOD)) {
+            List<BlockPos> matchingBlocks = getMatchingBlocks(event.getPos(), state, level, true);
+            List<BlockPos> leaves = new ArrayList<>();
+            for (BlockPos pos : matchingBlocks) {
+                if (level.getBlockState(pos).is(ModBlockTags.WOOD)) handleBreaking(level, pos, event.getPlayer(), tool);
+                else leaves.add(pos);
+            }
+            VeinMiningMod.logInfo("Amount of Leaves: " + leaves.size());
+            handleDecay(level, leaves);
+
+        } else if (state.is(ModBlockTags.ORES)) {
+            List<BlockPos> matchingBlocks = getMatchingBlocks(event.getPos(), state, level, false);
+            handleBreaking(level, matchingBlocks, event.getPlayer(), tool);
         }
     }
 
-    public static List<BlockPos> getMatchingBlocks(BlockPos pos, BlockState state, Level level) {
+    public static void handleBreaking(Level level, List<BlockPos> matchingBlocks, Player player, ItemStack tool) {
+        for (BlockPos pos : matchingBlocks) {
+            handleBreaking(level, pos, player, tool);
+        }
+    }
+
+    public static void handleBreaking(Level level, BlockPos pos, Player player, ItemStack tool) {
+        if (tool.getCount() <= 0) return;
+        VeinMiningMod.logInfo("Breaking: " + pos.toShortString());
+        breakBlock(level, pos, tool);
+        tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+    }
+
+    public static void handleDecay(Level level, BlockPos pos) {
+
+    }
+
+    public static void handleDecay(Level level, List<BlockPos> matchingBlocks) {
+        for (BlockPos pos : matchingBlocks) {
+            handleDecay(level, pos);
+        }
+    }
+
+    public static BlockState getLeavesOfWood(BlockState wood) {
+        Map<Block, Block> LOG_TO_LEAVES = new HashMap<>();
+        LOG_TO_LEAVES.put(Blocks.OAK_LOG, Blocks.OAK_LEAVES);
+        LOG_TO_LEAVES.put(Blocks.SPRUCE_LOG, Blocks.SPRUCE_LEAVES);
+        LOG_TO_LEAVES.put(Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES);
+        LOG_TO_LEAVES.put(Blocks.JUNGLE_LOG, Blocks.JUNGLE_LEAVES);
+        LOG_TO_LEAVES.put(Blocks.ACACIA_LOG, Blocks.ACACIA_LEAVES);
+        LOG_TO_LEAVES.put(Blocks.DARK_OAK_LOG, Blocks.DARK_OAK_LEAVES);
+        LOG_TO_LEAVES.put(Blocks.MANGROVE_LOG, Blocks.MANGROVE_LEAVES);
+        LOG_TO_LEAVES.put(Blocks.CHERRY_LOG, Blocks.CHERRY_LEAVES);
+        return LOG_TO_LEAVES.get(wood.getBlock()).defaultBlockState();
+    }
+
+    public static List<BlockPos> getMatchingBlocks(BlockPos pos, BlockState state, Level level, boolean includeLeaves) {
         List<BlockPos> visited = new LinkedList<>();
         Queue<BlockPos> queue = new LinkedList<>();
 
         queue.add(pos);
 
-        do {
-            List<BlockPos> neighbours = getSurroundingBlocks(queue.poll(), state, level);
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.poll();
+            List<BlockPos> neighbours = getSurroundingBlocks(currentPos, state, level);
+            if (includeLeaves) neighbours.addAll(getSurroundingBlocks(currentPos, getLeavesOfWood(state), level));
             for (BlockPos neighbour : neighbours) {
                 if (visited.contains(neighbour)) continue;
                 visited.add(neighbour);
                 queue.add(neighbour);
             }
-        } while (!queue.isEmpty());
+        }
 
         return visited;
     }
