@@ -1,17 +1,15 @@
 package com.minecraft.forge.veinmining;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -20,6 +18,18 @@ import java.util.*;
 
 @Mod.EventBusSubscriber(modid = VeinMiningMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ToolBehaviourHandler {
+    private static final Queue<DecayEntry> decayQueue = new LinkedList<>();
+
+    private static class DecayEntry {
+        final Level level;
+        final BlockPos pos;
+
+        DecayEntry(Level level, BlockPos pos) {
+            this.level = level;
+            this.pos = pos;
+        }
+    }
+
 
     @SubscribeEvent
     public static void onBlockBreakEvent(BlockEvent.BreakEvent event) {
@@ -32,19 +42,28 @@ public class ToolBehaviourHandler {
 
         if (state.is(ModBlockTags.WOOD)) {
             List<BlockPos> matchingBlocks = getMatchingBlocks(event.getPos(), state, level, true);
-            List<BlockPos> leaves = new ArrayList<>();
+            List<DecayEntry> leaves = new ArrayList<>();
             for (BlockPos pos : matchingBlocks) {
                 if (level.getBlockState(pos).is(ModBlockTags.WOOD)) handleBreaking(level, pos, event.getPlayer(), tool);
-                else leaves.add(pos);
+                else leaves.add(new DecayEntry(level, pos));
             }
             VeinMiningMod.logInfo("Amount of Leaves: " + leaves.size());
-            handleDecay(level, leaves);
+            decayQueue.addAll(leaves);
 
         } else if (state.is(ModBlockTags.ORES)) {
             List<BlockPos> matchingBlocks = getMatchingBlocks(event.getPos(), state, level, false);
             handleBreaking(level, matchingBlocks, event.getPlayer(), tool);
         }
     }
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && !decayQueue.isEmpty()) {
+            DecayEntry entry = decayQueue.poll();
+            handleDecay(entry.level, entry.pos);
+        }
+    }
+
 
     public static void handleBreaking(Level level, List<BlockPos> matchingBlocks, Player player, ItemStack tool) {
         for (BlockPos pos : matchingBlocks) {
@@ -60,14 +79,11 @@ public class ToolBehaviourHandler {
     }
 
     public static void handleDecay(Level level, BlockPos pos) {
-
+        Block.dropResources(level.getBlockState(pos), level, pos);
+        level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2 | 16);
+        VeinMiningMod.logInfo("Decayed: " + pos.toShortString());
     }
 
-    public static void handleDecay(Level level, List<BlockPos> matchingBlocks) {
-        for (BlockPos pos : matchingBlocks) {
-            handleDecay(level, pos);
-        }
-    }
 
     public static BlockState getLeavesOfWood(BlockState wood) {
         Map<Block, Block> LOG_TO_LEAVES = new HashMap<>();
