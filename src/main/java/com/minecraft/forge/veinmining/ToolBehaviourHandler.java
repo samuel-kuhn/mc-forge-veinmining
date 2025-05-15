@@ -20,16 +20,7 @@ import java.util.*;
 public class ToolBehaviourHandler {
     private static final Queue<DecayEntry> decayQueue = new LinkedList<>();
 
-    private static class DecayEntry {
-        final Level level;
-        final BlockPos pos;
-
-        DecayEntry(Level level, BlockPos pos) {
-            this.level = level;
-            this.pos = pos;
-        }
-    }
-
+    private record DecayEntry(Level level, BlockPos pos) { }
 
     @SubscribeEvent
     public static void onBlockBreakEvent(BlockEvent.BreakEvent event) {
@@ -64,7 +55,6 @@ public class ToolBehaviourHandler {
         }
     }
 
-
     public static void handleBreaking(Level level, List<BlockPos> matchingBlocks, Player player, ItemStack tool) {
         for (BlockPos pos : matchingBlocks) {
             handleBreaking(level, pos, player, tool);
@@ -83,7 +73,6 @@ public class ToolBehaviourHandler {
         level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2 | 16);
         VeinMiningMod.logInfo("Decayed: " + pos.toShortString());
     }
-
 
     public static BlockState getLeavesOfWood(BlockState wood) {
         Map<Block, Block> LOG_TO_LEAVES = new HashMap<>();
