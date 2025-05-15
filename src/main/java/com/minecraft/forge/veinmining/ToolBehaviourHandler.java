@@ -22,6 +22,17 @@ public class ToolBehaviourHandler {
 
     private record DecayEntry(Level level, BlockPos pos) { }
 
+    private static final Map<Block, Block> LOG_TO_LEAVES = Map.of(
+        Blocks.OAK_LOG, Blocks.OAK_LEAVES,
+        Blocks.SPRUCE_LOG, Blocks.SPRUCE_LEAVES,
+        Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES,
+        Blocks.JUNGLE_LOG, Blocks.JUNGLE_LEAVES,
+        Blocks.ACACIA_LOG, Blocks.ACACIA_LEAVES,
+        Blocks.DARK_OAK_LOG, Blocks.DARK_OAK_LEAVES,
+        Blocks.MANGROVE_LOG, Blocks.MANGROVE_LEAVES,
+        Blocks.CHERRY_LOG, Blocks.CHERRY_LEAVES
+    );
+
     @SubscribeEvent
     public static void onBlockBreakEvent(BlockEvent.BreakEvent event) {
         ItemStack tool = event.getPlayer().getMainHandItem();
@@ -75,15 +86,6 @@ public class ToolBehaviourHandler {
     }
 
     public static BlockState getLeavesOfWood(BlockState wood) {
-        Map<Block, Block> LOG_TO_LEAVES = new HashMap<>();
-        LOG_TO_LEAVES.put(Blocks.OAK_LOG, Blocks.OAK_LEAVES);
-        LOG_TO_LEAVES.put(Blocks.SPRUCE_LOG, Blocks.SPRUCE_LEAVES);
-        LOG_TO_LEAVES.put(Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES);
-        LOG_TO_LEAVES.put(Blocks.JUNGLE_LOG, Blocks.JUNGLE_LEAVES);
-        LOG_TO_LEAVES.put(Blocks.ACACIA_LOG, Blocks.ACACIA_LEAVES);
-        LOG_TO_LEAVES.put(Blocks.DARK_OAK_LOG, Blocks.DARK_OAK_LEAVES);
-        LOG_TO_LEAVES.put(Blocks.MANGROVE_LOG, Blocks.MANGROVE_LEAVES);
-        LOG_TO_LEAVES.put(Blocks.CHERRY_LOG, Blocks.CHERRY_LEAVES);
         return LOG_TO_LEAVES.get(wood.getBlock()).defaultBlockState();
     }
 
